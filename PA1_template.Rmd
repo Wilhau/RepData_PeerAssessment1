@@ -8,18 +8,108 @@ output:
 
 ## Loading and preprocessing the data
 
+```{r}
+act <- read.csv("activity.csv")
+```
 
 
 ## What is mean total number of steps taken per day?
+1. Make a histogram of the total number of steps taken each day
+```{r}
+act_sum_date <- aggregate(steps ~ date, data=act, sum)
+hist(act_sum_date$steps, main="Total Number of Steps Taken per Day", xlab="Number of Steps")
+```
 
+2. Calculate and report the mean and median total number of steps taken
+per day
+```{r}
+act_mean_date <- aggregate(steps ~ date, data=act, mean)
+colnames(act_mean_date) <- c("date", "average_steps")
+act_mean_date
+```
 
+```{r}
+act_median_date <- aggregate(steps ~ date, data=act, median)
+colnames(act_median_date) <- c("date", "median_steps")
+act_median_date
+```
 
 ## What is the average daily activity pattern?
+1. Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis)
+and the average number of steps taken, averaged across all days (y-axis)
+```{r}
+act_mean_interval <- aggregate(steps ~ interval, data=act, mean)
+colnames(act_mean_interval) <- c("interval", "average_steps")
 
+plot(act_mean_interval, type="l", main="Daily Average Steps per 5-minutes Interval")
+```
+
+2. Which 5-minute interval, on average across all the days in the dataset,
+contains the maximum number of steps?
+```{r}
+subset(act_mean_interval, average_steps==max(act_mean_interval$average_steps))
+
+```
 
 
 ## Imputing missing values
 
+1. Calculate and report the total number of missing values in the dataset.
+```{r}
+nrow(act[is.na(act$steps),])
+```
+
+2. Devise a strategy for filling in all of the missing values in the dataset.  
+    Missing values will be replaced with the average steps of the interval.
+
+3. Create a new dataset that is equal to the original dataset but with the
+missing data filled in.
+```{r}
+act_na <- act[is.na(act$steps),]
+act_na_average <- merge(act_na, act_mean_interval)
+act_na_average$steps <- act_na_average$average_steps
+act_filled <- rbind(act_na_average[, c("steps", "date", "interval")], act[!is.na(act$steps), ])
+```
+
+4. Make a histogram of the total number of steps taken each day and Calculate
+and report the mean and median total number of steps taken per day.
+```{r}
+act_filled_sum_date <- aggregate(steps ~ date, data=act_filled, sum)
+hist(act_filled_sum_date$steps, main="Total Number of Steps Taken per Day with Missing value Replaced", xlab="Number of Steps")
+```
+
+```{r}
+act_filled_mean_date <- aggregate(steps ~ date, data=act_filled, mean)
+colnames(act_filled_mean_date) <- c("date", "average_steps")
+act_filled_mean_date
+```
+
+```{r}
+act_filled_median_date <- aggregate(steps ~ date, data=act_filled, median)
+colnames(act_filled_median_date) <- c("date", "median_steps")
+act_filled_median_date
+```
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+1. Create a new factor variable in the dataset with two levels - "weekday"
+and "weekend" indicating whether a given date is a weekday or weekend
+day.
+```{r}
+act_filled_weekdays <- transform(act_filled, day=weekdays(as.Date(date)))
+weekday <- data.frame(day=c("Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"), weekday=c(rep("weekend", 2), rep("weekday", 5)))
+act_filled_weekdays <- merge(weekday, act_filled_weekdays)
+
+```
+2. Make a panel plot containing a time series plot (i.e. type = "l") of the
+5-minute interval (x-axis) and the average number of steps taken, averaged
+across all weekday days or weekend days (y-axis).
+```{r}
+act_filled_weekdays_mean <- aggregate(steps ~ weekday + interval, data=act_filled_weekdays, mean)
+colnames(act_filled_weekdays_mean) <- c("weekday", "interval", "average_steps")
+par(mfrow=c(2, 1))
+plot(act_filled_weekdays_mean[act_filled_weekdays_mean$weekday=="weekend", c("interval", "average_steps")], type="l", main="Daily Average Steps per 5-minutes Interval during Weekends")
+plot(act_filled_weekdays_mean[act_filled_weekdays_mean$weekday=="weekday", c("interval", "average_steps")], type="l", main="Daily Average Steps per 5-minutes Interval during Weekdays")
+
+```
+
